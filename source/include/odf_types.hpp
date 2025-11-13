@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <string>
 #include <cstring>  // For std::strncpy and std::memset
+using namespace std;
 
 // ============================================================================
 // ENUMERATIONS - DO NOT MODIFY THESE VALUES
@@ -13,7 +14,7 @@
  * User role types
  * These values MUST remain consistent across all implementations
  */
-enum class UserRole : uint32_t {
+enum UserRole : uint32_t {
     NORMAL = 0,    // Regular user with standard permissions
     ADMIN = 1      // Administrator with full permissions
 };
@@ -23,7 +24,7 @@ enum class UserRole : uint32_t {
  * All functions return these codes to indicate operation status
  * DO NOT MODIFY THESE VALUES
  */
-enum class OFSErrorCodes : int32_t {
+enum OFSErrorCodes : int32_t {
     SUCCESS = 0,                      // Operation completed successfully
     ERROR_NOT_FOUND = -1,            // File/directory/user not found
     ERROR_PERMISSION_DENIED = -2,    // User lacks required permissions
@@ -41,15 +42,15 @@ enum class OFSErrorCodes : int32_t {
 /**
  * File entry types
  */
-enum class EntryType : uint8_t {
-    FILE = 0,         // Regular file
+enum EntryType : uint8_t {
+    Entry_FILE = 0,         // Regular file
     DIRECTORY = 1     // Directory
 };
 
 /**
  * File permission flags (UNIX-style)
  */
-enum class FilePermissions : uint32_t {
+enum FilePermissions : uint32_t {
     OWNER_READ = 0400,      // Owner can read
     OWNER_WRITE = 0200,     // Owner can write
     OWNER_EXECUTE = 0100,   // Owner can execute
@@ -95,7 +96,7 @@ struct OMNIHeader {
     uint8_t reserved[328];      // Reserved for future use (328 bytes)
 
     // Default constructor
-    OMNIHeader() = default;
+    // OMNIHeader() = default;
     
     // Constructor with initialization
     OMNIHeader(uint32_t version, uint64_t size, uint64_t header_sz, uint64_t block_sz)
@@ -122,7 +123,7 @@ struct UserInfo {
     uint8_t reserved[23];       // Reserved for future use
 
     // Default constructor
-    UserInfo() = default;
+    // UserInfo() = default;
     
     // Constructor
     UserInfo(const std::string& user, const std::string& hash, UserRole r, uint64_t created)
@@ -151,7 +152,7 @@ struct FileEntry {
     uint8_t reserved[47];       // Reserved for future use
 
     // Default constructor
-    FileEntry() = default;
+    // FileEntry() = default;
     
     // Constructor
     FileEntry(const std::string& filename, EntryType entry_type, uint64_t file_size, 
@@ -184,7 +185,7 @@ struct FileMetadata {
     uint8_t reserved[64];       // Reserved
 
     // Default constructor
-    FileMetadata() = default;
+    // FileMetadata() = default;
     
     // Constructor
     FileMetadata(const std::string& file_path, const FileEntry& file_entry)
@@ -208,7 +209,7 @@ struct SessionInfo {
     uint8_t reserved[32];       // Reserved
 
     // Default constructor
-    SessionInfo() = default;
+    // SessionInfo() = default;
     
     // Constructor
     SessionInfo(const std::string& id, const UserInfo& user_info, uint64_t login)
@@ -235,7 +236,7 @@ struct FSStats {
     uint8_t reserved[64];       // Reserved
 
     // Default constructor
-    FSStats() = default;
+    // FSStats() = default;
     
     // Constructor
     FSStats(uint64_t total, uint64_t used, uint64_t free)

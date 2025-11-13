@@ -33,41 +33,13 @@ int fs_format(const string& omni_path,
     ofstream file(omni_path, ios::binary | ios::trunc);
     if (!file) {
         cerr << "Error: Cannot create file " << omni_path << endl;
-        return int(OFSErrorCodes::ERROR_IO_ERROR);
+        return ERROR_IO_ERROR;
     }
 
-    // Step 2: Initialize header (zero out all fields)
-    OMNIHeader header;
-// Manually initialize all fields to 0
-header.format_version = 0;
-header.total_size = 0;
-header.header_size = 0;
-header.block_size = 0;
-header.user_table_offset = 0;
-header.max_users = 0;
-header.file_state_storage_offset = 0;
-header.change_log_offset = 0;
-header.config_timestamp = 0;
-
-// Initialize arrays manually
-for (int i = 0; i < sizeof(header.magic); i++) {
-    header.magic[i] = '\0';
-}
-for (int i = 0; i < sizeof(header.student_id); i++) {
-    header.student_id[i] = '\0';
-}
-for (int i = 0; i < sizeof(header.submission_date); i++) {
-    header.submission_date[i] = '\0';
-}
-for (int i = 0; i < sizeof(header.config_hash); i++) {
-    header.config_hash[i] = '\0';
-}
-for (int i = 0; i < sizeof(header.reserved); i++) {
-    header.reserved[i] = 0;
-} // This initializes everything to 0
+    OMNIHeader header(0x00010000, total_size, sizeof(OMNIHeader), block_size);  
     
     // Step 3: Fill basic info
-    copy(header.magic, sizeof(header.magic), "OMNIFS01");
+    std::memcpy(header.magic, "OMNIFS01", 8);
     header.format_version = 0x00010000;  // Version 1.0
     header.total_size = total_size;
     header.header_size = sizeof(OMNIHeader);
@@ -103,14 +75,14 @@ for (int i = 0; i < sizeof(header.reserved); i++) {
     cout << "SUCCESS: Created " << omni_path 
          << " (" << size_mb << " MB)" << endl;
 
-    return int(OFSErrorCodes::SUCCESS);
+    return SUCCESS;
 }
 
 int main() {
     // Configuration
     string omni_file = "../compiled/test.omni";
-    string student_id = "23K-1234";           // YOUR ID HERE
-    string date = "2025-11-10";               // TODAY'S DATE
+    string student_id = "BSAI-24003";           // YOUR ID HERE
+    string date = "2025-11-11";               // TODAY'S DATE
     uint64_t total_size = 5 * 1024 * 1024;    // 5 MB
     uint64_t block_size = 4096;               // 4 KB per block
 
