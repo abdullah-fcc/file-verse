@@ -153,7 +153,9 @@ struct FileEntry {
 
     // Default constructor
     // FileEntry() = default;
-    
+    FileEntry() {
+        memset(this, 0, sizeof(FileEntry));
+    }
     // Constructor
     FileEntry(const std::string& filename, EntryType entry_type, uint64_t file_size, 
               uint32_t perms, const std::string& file_owner, uint32_t file_inode)

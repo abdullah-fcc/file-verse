@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OFS - Omni File System</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Login Screen -->
+    <div id="login-screen" class="screen active">
+        <div class="login-container">
+            <div class="logo">
+                <svg width="80" height="80" viewBox="0 0 80 80">
+                    <circle cx="40" cy="40" r="35" fill="none" stroke="#667eea" stroke-width="3"/>
+                    <path d="M 25 40 L 40 25 L 55 40 L 40 55 Z" fill="#667eea"/>
+                </svg>
+            </div>
+            <h1>Omni File System</h1>
+            <p class="subtitle">Secure Multi-User File Management</p>
+            
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" placeholder="Enter username" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" placeholder="Enter password" required>
+                </div>
+                
+                <button type="submit" class="btn-primary">Login</button>
+                
+                <div id="login-error" class="error-message"></div>
+            </form>
+            
+            <div class="login-footer">
+                <p>Default admin credentials: admin / admin123</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Application Screen -->
+    <div id="app-screen" class="screen">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-left">
+                <svg width="40" height="40" viewBox="0 0 80 80">
+                    <circle cx="40" cy="40" r="35" fill="none" stroke="#667eea" stroke-width="3"/>
+                    <path d="M 25 40 L 40 25 L 55 40 L 40 55 Z" fill="#667eea"/>
+                </svg>
+                <span class="app-title">Omni File System</span>
+            </div>
+            
+            <div class="header-right">
+                <div class="user-info">
+                    <span id="current-user"></span>
+                    <span id="user-role" class="role-badge"></span>
+                </div>
+                <button id="logout-btn" class="btn-secondary">Logout</button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="app-container">
+            <!-- Sidebar Navigation -->
+            <aside class="sidebar">
+                <nav class="nav-menu">
+                    <a href="#" class="nav-item active" data-view="files">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+                            <polyline points="13 2 13 9 20 9"></polyline>
+                        </svg>
+                        <span>Files</span>
+                    </a>
+                    
+                    <a href="#" class="nav-item" data-view="users" id="users-nav">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="9" cy="7" r="4"></circle>
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                        </svg>
+                        <span>Users</span>
+                    </a>
+                    
+                    <a href="#" class="nav-item" data-view="stats">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="20" x2="12" y2="10"></line>
+                            <line x1="18" y1="20" x2="18" y2="4"></line>
+                            <line x1="6" y1="20" x2="6" y2="16"></line>
+                        </svg>
+                        <span>Statistics</span>
+                    </a>
+                </nav>
+            </aside>
+
+            <!-- Main Content Area -->
+            <main class="main-content">
+                <!-- Files View -->
+                <div id="files-view" class="view active">
+                    <div class="view-header">
+                        <h2>File Browser</h2>
+                        <div class="actions">
+                            <button id="new-file-btn" class="btn-primary">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                </svg>
+                                New File
+                            </button>
+                            <button id="new-dir-btn" class="btn-primary">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                                </svg>
+                                New Folder
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="breadcrumb">
+                        <span class="breadcrumb-item" data-path="/">/</span>
+                    </div>
+                    
+                    <div class="file-list" id="file-list">
+                        <!-- Files will be dynamically loaded here -->
+                    </div>
+                </div>
+
+                <!-- Users View (Admin Only) -->
+                <div id="users-view" class="view">
+                    <div class="view-header">
+                        <h2>User Management</h2>
+                        <button id="new-user-btn" class="btn-primary">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            Create User
+                        </button>
+                    </div>
+                    
+                    <div class="user-list" id="user-list">
+                        <!-- Users will be dynamically loaded here -->
+                    </div>
+                </div>
+
+                <!-- Statistics View -->
+                <div id="stats-view" class="view">
+                    <div class="view-header">
+                        <h2>File System Statistics</h2>
+                        <button id="refresh-stats-btn" class="btn-secondary">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="23 4 23 10 17 10"></polyline>
+                                <polyline points="1 20 1 14 7 14"></polyline>
+                                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                            </svg>
+                            Refresh
+                        </button>
+                    </div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon">📊</div>
+                            <div class="stat-content">
+                                <h3 id="stat-total-size">0 MB</h3>
+                                <p>Total Size</p>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-icon">💾</div>
+                            <div class="stat-content">
+                                <h3 id="stat-used-space">0 MB</h3>
+                                <p>Used Space</p>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-icon">📁</div>
+                            <div class="stat-content">
+                                <h3 id="stat-total-files">0</h3>
+                                <p>Total Files</p>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-icon">🗂️</div>
+                            <div class="stat-content">
+                                <h3 id="stat-total-dirs">0</h3>
+                                <p>Directories</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Modal for Create File -->
+    <div id="file-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Create New File</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <form id="file-form">
+                <div class="form-group">
+                    <label for="file-name">File Name</label>
+                    <input type="text" id="file-name" placeholder="example.txt" required>
+                </div>
+                <div class="form-group">
+                    <label for="file-content">Content</label>
+                    <textarea id="file-content" rows="10" placeholder="Enter file content..."></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary cancel-btn">Cancel</button>
+                    <button type="submit" class="btn-primary">Create File</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for Create Directory -->
+    <div id="dir-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Create New Folder</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <form id="dir-form">
+                <div class="form-group">
+                    <label for="dir-name">Folder Name</label>
+                    <input type="text" id="dir-name" placeholder="new-folder" required>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary cancel-btn">Cancel</button>
+                    <button type="submit" class="btn-primary">Create Folder</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for Create User -->
+    <div id="user-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Create New User</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <form id="user-form">
+                <div class="form-group">
+                    <label for="new-username">Username</label>
+                    <input type="text" id="new-username" placeholder="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="new-password">Password</label>
+                    <input type="password" id="new-password" placeholder="password" required>
+                </div>
+                <div class="form-group">
+                    <label for="user-role">Role</label>
+                    <select id="user-role" required>
+                        <option value="2">User</option>
+                        <option value="1">Admin</option>
+                    </select>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary cancel-btn">Cancel</button>
+                    <button type="submit" class="btn-primary">Create User</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for View/Edit File -->
+    <div id="view-file-modal" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h3 id="view-file-title">View File</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <textarea id="view-file-content" rows="15" readonly></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary cancel-btn">Close</button>
+                <button type="button" id="delete-file-btn" class="btn-danger">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
+
+    <script src="gateway.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
