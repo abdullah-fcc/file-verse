@@ -3,6 +3,7 @@
 #include <vector>
 #include <ctime>
 #include <algorithm>
+#include <map>
 #include "../include/odf_types.hpp"
 #include "../include/ofs_functions.hpp"
 #include "helper.hpp"
@@ -12,6 +13,10 @@ vector<UserInfo> user_list_internal;
 bool users_loaded = false;
 
 vector<SessionInfo> active_sessions;
+
+// Map to store actual passwords (username -> password)
+// In production, this should be encrypted, but for your requirement we'll keep it
+map<string, string> actual_passwords;
 
 bool compare_username(const char* username_array, const string& username) {
     size_t i = 0;
@@ -84,6 +89,10 @@ int load_users(const string& omni_path) {
 
         if (user.is_active == 1 && user.username[0] != '\0') {
             user_list_internal.push_back(user);
+            
+            // Store the password hash as the "actual password" for now
+            // Note: In real systems you'd store encrypted passwords separately
+            actual_passwords[string(user.username)] = string(user.password_hash);
         }
     }
 
@@ -94,8 +103,8 @@ int load_users(const string& omni_path) {
     return SUCCESS;
 }
 
-// NEW FUNCTION - Returns user list to caller
-int user_list(const string& omni_path, vector<UserInfo>& users) {
+// Returns user list with actual passwords for admin
+int user_list(const string& omni_path, vector<UserInfo>& users, bool include_passwords) {
     if (!users_loaded) {
         int result = load_users(omni_path);
         if (result != SUCCESS) {
@@ -148,7 +157,11 @@ int user_create(const string& omni_path,
             
             cout << "SUCCESS: User '" << username << "' created at slot " << i << endl;
             file.close();
+            
             user_list_internal.push_back(new_user);
+            
+            // Store actual password in memory
+            actual_passwords[username] = password;
             
             return SUCCESS;
         }
@@ -157,6 +170,78 @@ int user_create(const string& omni_path,
     file.close();
     cerr << "Error: No free user slots available" << endl;
     return ERROR_NO_SPACE;
+}
+
+int user_delete(const string& omni_path, const string& username) {
+    if (!users_loaded) {
+        load_users(omni_path);
+    }
+
+    if (!user_exists(username)) {
+        cerr << "Error: User '" << username << "' not found" << endl;
+        return ERROR_NOT_FOUND;
+    }
+
+    // Don't allow deleting admin user
+    if (username == "admin") {
+        cerr << "Error: Cannot delete admin user" << endl;
+        return ERROR_PERMISSION_DENIED;
+    }
+
+    fstream file(omni_path, ios::in | ios::out | ios::binary);
+    if (!file) {
+        cerr << "Error: Cannot open file" << endl;
+        return ERROR_IO_ERROR;
+    }
+
+    OMNIHeader header(0, 0, 0, 0);
+    file.read((char*)&header, sizeof(header));
+
+    file.seekg(header.user_table_offset, ios::beg);
+
+    for (uint32_t i = 0; i < header.max_users; i++) {
+        UserInfo user("", "", NORMAL, 0);
+        
+        uint64_t current_pos = header.user_table_offset + (i * sizeof(UserInfo));
+        file.seekg(current_pos, ios::beg);
+        file.read((char*)&user, sizeof(user));
+
+        if (user.is_active == 1 && compare_username(user.username, username)) {
+            // Mark user as inactive
+            user.is_active = 0;
+            user.username[0] = '\0';
+            
+            file.seekp(current_pos, ios::beg);
+            file.write((char*)&user, sizeof(user));
+            file.flush();
+            file.close();
+            
+            // Remove from internal list
+            for (size_t j = 0; j < user_list_internal.size(); j++) {
+                if (compare_username(user_list_internal[j].username, username)) {
+                    user_list_internal.erase(user_list_internal.begin() + j);
+                    break;
+                }
+            }
+            
+            // Remove from password map
+            actual_passwords.erase(username);
+            
+            cout << "SUCCESS: User '" << username << "' deleted" << endl;
+            return SUCCESS;
+        }
+    }
+
+    file.close();
+    cerr << "Error: User not found in file system" << endl;
+    return ERROR_NOT_FOUND;
+}
+
+string get_user_password(const string& username) {
+    if (actual_passwords.find(username) != actual_passwords.end()) {
+        return actual_passwords[username];
+    }
+    return "";
 }
 
 void user_list_all() {
@@ -208,7 +293,13 @@ int user_login(void** session, const string& username, const string& password, c
             active_sessions.push_back(new_session);
             *session = &active_sessions[active_sessions.size() - 1];
 
-            cout << "SUCCESS: User '" << username << "' logged in" << endl;
+            // Store actual password when user logs in
+            if (actual_passwords.find(username) == actual_passwords.end()) {
+                actual_passwords[username] = password;
+            }
+
+            cout << "SUCCESS: User '" << username << "' logged in (Role: " 
+                 << (user.role == ADMIN ? "ADMIN" : "USER") << ")" << endl;
 
             file.close();
             return SUCCESS;

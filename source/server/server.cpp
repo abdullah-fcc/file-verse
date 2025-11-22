@@ -1,4 +1,4 @@
-// server.cpp - Complete Fixed OFS Socket Server with JSON Escaping
+// server.cpp - Complete OFS Socket Server with RBAC
 #include <iostream>
 #include <string>
 #include <vector>
@@ -22,10 +22,9 @@ using namespace std;
 // JSON HELPER FUNCTIONS
 // ============================================================================
 
-// Escape special characters for JSON string
 string escape_json_string(const string& input) {
     string output;
-    output.reserve(input.length() * 2); // Reserve space for efficiency
+    output.reserve(input.length() * 2);
     
     for (char c : input) {
         switch (c) {
@@ -38,7 +37,6 @@ string escape_json_string(const string& input) {
             case '\t': output += "\\t"; break;
             default:
                 if (c < 0x20) {
-                    // Escape control characters
                     char buf[7];
                     snprintf(buf, sizeof(buf), "\\u%04x", (unsigned char)c);
                     output += buf;
@@ -58,8 +56,6 @@ struct JSONRequest {
     string operation;
     string session_id;
     string request_id;
-    
-    // Parameters
     string username;
     string password;
     string path;
@@ -79,7 +75,6 @@ struct JSONResponse {
     string data;
 };
 
-// Extract value from JSON
 string extract_json_value(const string& json, const string& key) {
     string search = "\"" + key + "\":\"";
     size_t pos = json.find(search);
@@ -92,7 +87,6 @@ string extract_json_value(const string& json, const string& key) {
     return json.substr(start, end - start);
 }
 
-// Better extraction for data field that may contain escaped characters
 string extract_json_data(const string& json) {
     string search = "\"data\":\"";
     size_t pos = json.find(search);
@@ -106,7 +100,6 @@ string extract_json_data(const string& json) {
         char c = json[i];
         
         if (escaped) {
-            // Handle escape sequences
             switch (c) {
                 case 'n': result += '\n'; break;
                 case 't': result += '\t'; break;
@@ -121,22 +114,15 @@ string extract_json_data(const string& json) {
         } else if (c == '\\') {
             escaped = true;
         } else if (c == '"') {
-            // End of string value
             break;
         } else {
             result += c;
         }
     }
     
-    cout << "[DEBUG] Extracted data length: " << result.length() << " bytes" << endl;
-    if (result.length() > 0 && result.length() <= 100) {
-        cout << "[DEBUG] Data content: " << result << endl;
-    }
-    
     return result;
 }
 
-// Extract numeric value
 int extract_json_number(const string& json, const string& key) {
     string search = "\"" + key + "\":";
     size_t pos = json.find(search);
@@ -150,7 +136,6 @@ int extract_json_number(const string& json, const string& key) {
     return atoi(num_str.c_str());
 }
 
-// Parse JSON request
 JSONRequest parse_json_request(const string& json) {
     JSONRequest req;
     
@@ -158,7 +143,6 @@ JSONRequest parse_json_request(const string& json) {
     req.session_id = extract_json_value(json, "session_id");
     req.request_id = extract_json_value(json, "request_id");
     
-    // Extract parameters
     size_t params_start = json.find("\"parameters\":{");
     if (params_start != string::npos) {
         string params = json.substr(params_start);
@@ -167,10 +151,7 @@ JSONRequest parse_json_request(const string& json) {
         req.path = extract_json_value(params, "path");
         req.old_path = extract_json_value(params, "old_path");
         req.new_path = extract_json_value(params, "new_path");
-        
-        // Use special extraction for data field to handle escape sequences
         req.data = extract_json_data(json);
-        
         req.role = extract_json_number(params, "role");
     }
     
@@ -266,10 +247,10 @@ public:
         
         cout << "[PROCESSOR] Executing: " << req.operation << " | Path: '" << req.path << "'" << endl;
         
-        // Route to actual functions
         if (req.operation == "user_login") return process_user_login(req);
         else if (req.operation == "user_logout") return process_user_logout(req);
         else if (req.operation == "user_create") return process_user_create(req);
+        else if (req.operation == "user_delete") return process_user_delete(req);
         else if (req.operation == "user_list") return process_user_list(req);
         else if (req.operation == "file_create") return process_file_create(req);
         else if (req.operation == "file_read") return process_file_read(req);
@@ -292,7 +273,6 @@ public:
     }
     
 private:
-    // User Operations
     JSONResponse process_user_login(const JSONRequest& req) {
         JSONResponse resp;
         void* session = nullptr;
@@ -338,19 +318,42 @@ private:
         return resp;
     }
     
+    JSONResponse process_user_delete(const JSONRequest& req) {
+        JSONResponse resp;
+        
+        cout << "[USER_DELETE] Username: " << req.username << endl;
+        
+        int result = user_delete(omni_path, req.username);
+        
+        if (result == SUCCESS) {
+            resp.status = "success";
+            resp.data = "\"message\":\"User deleted successfully\"";
+        } else {
+            resp.status = "error";
+            resp.error_code = result;
+            resp.error_message = get_error_message(result);
+        }
+        
+        return resp;
+    }
+    
     JSONResponse process_user_list(const JSONRequest& req) {
         JSONResponse resp;
         vector<UserInfo> users;
         
-        int result = user_list(omni_path, users);
+        int result = user_list(omni_path, users, true);
         
         if (result == SUCCESS) {
             resp.status = "success";
             string users_json = "\"users\":[";
             for (size_t i = 0; i < users.size(); i++) {
+                string username_str = string(users[i].username);
+                string actual_password = get_user_password(username_str);
+                
                 users_json += "{";
-                users_json += "\"username\":\"" + escape_json_string(string(users[i].username)) + "\",";
+                users_json += "\"username\":\"" + escape_json_string(username_str) + "\",";
                 users_json += "\"role\":" + to_string(users[i].role) + ",";
+                users_json += "\"password\":\"" + escape_json_string(actual_password) + "\",";
                 users_json += "\"password_hash\":\"" + escape_json_string(string(users[i].password_hash)) + "\"";
                 users_json += "}";
                 if (i < users.size() - 1) users_json += ",";
@@ -366,7 +369,6 @@ private:
         return resp;
     }
     
-    // File Operations
     JSONResponse process_file_create(const JSONRequest& req) {
         JSONResponse resp;
         
@@ -374,30 +376,16 @@ private:
         void* session = &dummy_session;
         
         cout << "[FILE_CREATE] Path: '" << req.path << "'" << endl;
-        cout << "[FILE_CREATE] Content length: " << req.data.length() << " bytes" << endl;
-        cout << "[FILE_CREATE] Content (first 100 chars): ";
-        if (req.data.length() > 0) {
-            string preview = req.data.substr(0, min((size_t)100, req.data.length()));
-            for (char c : preview) {
-                if (c >= 32 && c <= 126) cout << c;
-                else cout << "\\x" << hex << (int)(unsigned char)c << dec;
-            }
-            cout << endl;
-        } else {
-            cout << "(EMPTY)" << endl;
-        }
         
         int result = file_create(session, req.path, req.data);
         
         if (result == SUCCESS) {
             resp.status = "success";
             resp.data = "\"message\":\"File created successfully\"";
-            cout << "[FILE_CREATE] SUCCESS" << endl;
         } else {
             resp.status = "error";
             resp.error_code = result;
             resp.error_message = get_error_message(result);
-            cout << "[FILE_CREATE] FAILED with error: " << result << endl;
         }
         
         return resp;
@@ -416,26 +404,12 @@ private:
         
         if (result == SUCCESS) {
             resp.status = "success";
-            cout << "[FILE_READ] Success, content length: " << content.length() << " bytes" << endl;
-            cout << "[FILE_READ] Content (first 100 chars): ";
-            if (content.length() > 0) {
-                string preview = content.substr(0, min((size_t)100, content.length()));
-                for (char c : preview) {
-                    if (c >= 32 && c <= 126) cout << c;
-                    else cout << "\\x" << hex << (int)(unsigned char)c << dec;
-                }
-                cout << endl;
-            } else {
-                cout << "(EMPTY)" << endl;
-            }
-            
-            // PROPERLY ESCAPE THE CONTENT FOR JSON
             resp.data = "\"content\":\"" + escape_json_string(content) + "\"";
+            cout << "[FILE_READ] Success, content length: " << content.length() << " bytes" << endl;
         } else {
             resp.status = "error";
             resp.error_code = result;
             resp.error_message = get_error_message(result);
-            cout << "[FILE_READ] Failed with error: " << result << endl;
         }
         
         return resp;
@@ -495,7 +469,6 @@ private:
         return resp;
     }
     
-    // Directory Operations
     JSONResponse process_dir_create(const JSONRequest& req) {
         JSONResponse resp;
         
@@ -548,7 +521,6 @@ private:
             resp.status = "error";
             resp.error_code = result;
             resp.error_message = get_error_message(result);
-            cout << "[DIR_LIST] Failed with error: " << result << endl;
         }
         
         return resp;
@@ -588,7 +560,6 @@ private:
         return resp;
     }
     
-    // Information Operations
     JSONResponse process_get_stats(const JSONRequest& req) {
         JSONResponse resp;
         

@@ -16,8 +16,10 @@ int user_login(void** session, const std::string& username, const std::string& p
 int user_logout(void* session);
 int user_create(const std::string& omni_path, const std::string& username, 
                 const std::string& password, uint32_t role);
+int user_delete(const std::string& omni_path, const std::string& username);  // NEW
 void user_list_all();
-int user_list(const std::string& omni_path, std::vector<UserInfo>& users);  // ADD THIS LINE
+int user_list(const std::string& omni_path, std::vector<UserInfo>& users, bool include_passwords = false);
+std::string get_user_password(const std::string& username);  // NEW
 
 // File Operations
 int file_create(void* session, const std::string& path, const std::string& data);

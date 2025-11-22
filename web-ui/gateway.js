@@ -1,3 +1,6 @@
+/**
+ * OFS Gateway HTTP - Complete with all operations
+ */
 class OFSGatewayHTTP {
     constructor(host = 'localhost', port = 3000) {
         this.baseUrl = `http://${host}:${port}`;
@@ -31,12 +34,12 @@ class OFSGatewayHTTP {
         throw new Error(data.error_message || "Unknown error");
     }
 
+    // User operations
     async login(username, password) {
         const res = await this.sendRequest("user_login", { username, password });
-
-        if (res.data && res.data.session_id)
+        if (res.data && res.data.session_id) {
             this.sessionId = res.data.session_id;
-
+        }
         return res;
     }
 
@@ -50,10 +53,15 @@ class OFSGatewayHTTP {
         return this.sendRequest("user_create", { username, password, role });
     }
 
+    async deleteUser(username) {
+        return this.sendRequest("user_delete", { username });
+    }
+
     async listUsers() {
         return this.sendRequest("user_list", {});
     }
 
+    // File operations
     async createFile(path, content) {
         return this.sendRequest("file_create", { path, data: content });
     }
@@ -66,6 +74,15 @@ class OFSGatewayHTTP {
         return this.sendRequest("file_delete", { path });
     }
 
+    async renameFile(oldPath, newPath) {
+        return this.sendRequest("file_rename", { old_path: oldPath, new_path: newPath });
+    }
+
+    async fileExists(path) {
+        return this.sendRequest("file_exists", { path });
+    }
+
+    // Directory operations
     async createDirectory(path) {
         return this.sendRequest("dir_create", { path });
     }
@@ -78,6 +95,11 @@ class OFSGatewayHTTP {
         return this.sendRequest("dir_delete", { path });
     }
 
+    async directoryExists(path) {
+        return this.sendRequest("dir_exists", { path });
+    }
+
+    // Information operations
     async getStats() {
         return this.sendRequest("get_stats", {});
     }
@@ -87,4 +109,4 @@ class OFSGatewayHTTP {
     }
 }
 
-window.OFSGatewayHTTP = OFSGatewayHTTP;
+window.OFSGatewayHTTP = OFSGatewayHTTP; s
