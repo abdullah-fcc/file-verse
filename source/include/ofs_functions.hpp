@@ -1,3 +1,6 @@
+#ifndef OFS_FUNCTIONS_HPP
+#define OFS_FUNCTIONS_HPP
+
 #include "odf_types.hpp"
 #include <string>
 #include <vector>
@@ -14,6 +17,7 @@ int user_logout(void* session);
 int user_create(const std::string& omni_path, const std::string& username, 
                 const std::string& password, uint32_t role);
 void user_list_all();
+int user_list(const std::string& omni_path, std::vector<UserInfo>& users);  // ADD THIS LINE
 
 // File Operations
 int file_create(void* session, const std::string& path, const std::string& data);
@@ -33,3 +37,5 @@ int get_metadata(void* session, const std::string& path, FileMetadata& meta);
 int set_permissions(void* session, const std::string& path, uint32_t permissions);
 int get_stats(void* session, FSStats& stats);
 std::string get_error_message(int error_code);
+
+#endif // OFS_FUNCTIONS_HPP

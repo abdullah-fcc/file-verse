@@ -85,26 +85,33 @@ int file_create(void* session, const string& path, const string& data) {
     }
     check_file.close();
 
-    FileEntry entry(path, Entry_FILE, data.size(), 0644, string(s->user.username), rand() % 10000);
-    entry.created_time = time(nullptr);
-    entry.modified_time = time(nullptr);
-
     fstream file("../compiled/test.omni", ios::in | ios::out | ios::binary);
     if (!file) {
         cerr << "Error: Cannot open file system for writing" << endl;
         return ERROR_IO_ERROR;
     }
 
+    // Get the position where data will be written (at end of file)
+    file.seekp(0, ios::end);
+    uint64_t data_position = file.tellp();
+    
+    // Create entry with inode storing the data position
+    // Note: We cast uint64_t to uint32_t - this limits file system size but works for now
+    FileEntry entry(path, Entry_FILE, data.size(), 0644, string(s->user.username), (uint32_t)data_position);
+    entry.created_time = time(nullptr);
+    entry.modified_time = time(nullptr);
+
+    // Write data at end of file FIRST
+    file.write(data.c_str(), data.size());
+    
+    // Then write entry to file table with the correct inode (data position)
     file.seekp(slot_pos, ios::beg);
     file.write((const char*)&entry, sizeof(entry));
-    
-    file.seekp(0, ios::end);
-    file.write(data.c_str(), data.size());
     
     file.flush();
     file.close();
 
-    cout << "SUCCESS: Created file '" << path << "' (" << data.size() << " bytes)" << endl;
+    cout << "SUCCESS: Created file '" << path << "' (" << data.size() << " bytes) at position " << data_position << endl;
     return SUCCESS;
 }
 
@@ -129,16 +136,16 @@ int file_read(void* session, const string& path, string& content) {
         return ERROR_NOT_FOUND;
     }
 
+    // Read from the stored data position (inode contains the data position)
     vector<char> buffer(entry.size);
-    uint64_t data_pos = pos + sizeof(FileEntry);
-    file.seekg(data_pos, ios::beg);
+    file.seekg(entry.inode, ios::beg);
     file.read(buffer.data(), entry.size);
     
     content = string(buffer.begin(), buffer.end());
     
     file.close();
 
-    cout << "SUCCESS: Read file '" << path << "' (" << entry.size << " bytes)" << endl;
+    cout << "SUCCESS: Read file '" << path << "' (" << entry.size << " bytes) from position " << entry.inode << endl;
     return SUCCESS;
 }
 
@@ -165,6 +172,7 @@ int file_delete(void* session, const string& path) {
     }
     check_file.close();
 
+    // Mark entry as deleted by clearing the name
     entry.name[0] = '\0';
 
     fstream file("../compiled/test.omni", ios::in | ios::out | ios::binary);
@@ -231,7 +239,7 @@ int file_rename(void* session, const string& old_path, const string& new_path) {
     }
     check_file.close();
 
-
+    // Update the name in the entry
     copy_name(entry.name, sizeof(entry.name), new_path);
 
     fstream file("../compiled/test.omni", ios::in | ios::out | ios::binary);

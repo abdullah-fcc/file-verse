@@ -718,3 +718,58 @@ body {
         white-space: nowrap;
     }
 }
+
+/* Add these styles to your existing styles.css */
+
+/* User Cards - Make them clickable */
+.user-card {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.user-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.user-card:active {
+    transform: translateY(0);
+}
+
+/* User details section */
+.user-info-hidden {
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        max-height: 0;
+    }
+    to {
+        opacity: 1;
+        max-height: 500px;
+    }
+}
+
+.user-details {
+    flex: 1;
+}
+
+.user-role-label {
+    font-size: 0.85em;
+    color: #666;
+    margin-top: 4px;
+}
+
+/* Better formatting for password hash display */
+.user-info-hidden div {
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+    line-height: 1.6;
+}
+
+.user-info-hidden strong {
+    color: #667eea;
+    font-weight: 600;
+}
